@@ -1,0 +1,15 @@
+{
+    "display_name": "Kokoro Avatar",
+    "loading_order": 1,
+    "requires": [],
+    "optional": [],
+    "dependencies": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "local",
+    "version": "0.1.0",
+    "homePage": "",
+    "hooks": {
+        "activate": "init"
+    }
+}
