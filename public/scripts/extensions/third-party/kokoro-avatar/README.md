@@ -35,7 +35,7 @@ http://localhost:5173/avatar.html
 SillyTavernの `Kokoro Avatar` 設定で `Avatar iframe URL` を指定します。TTS設定をURL queryで渡す場合は、ここに含めます。
 
 ```text
-http://localhost:5173/avatar.html?ttsEndpoint=http://localhost:8000&ttsModel=tts-1&voice=alloy
+http://localhost:5173/avatar.html?ttsEndpoint=http://127.0.0.1:8088&ttsModel=irodori-tts&voice=calm_girl&responseFormat=wav
 ```
 
 ## TTS設定
