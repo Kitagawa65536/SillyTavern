@@ -27,7 +27,7 @@ npm run dev
 既定のiframe URLは以下です。
 
 ```text
-http://localhost:5173/avatar.html
+http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav
 ```
 
 ## iframe URL設定
@@ -41,6 +41,10 @@ http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodo
 ## TTS設定
 
 SillyTavern側ではTTS API keyを扱いません。`kokoro` の `avatar.html` 側でURL queryまたはlocalStorageに設定してください。
+
+## 音声再生の許可
+
+ブラウザのautoplay制限により、初回はiframe内の `Enable Voice` をクリックする必要があります。TTS生成後に再生だけが拒否された場合、avatar側に `Play Last Speech` が表示され、生成済み音声を再利用して再生できます。
 
 ## 既知の制限
 
