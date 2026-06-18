@@ -2,16 +2,19 @@ import { extension_settings } from '../../../extensions.js';
 import { eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
 
 const MODULE_NAME = 'kokoroAvatar';
+const DEFAULT_AVATAR_URL = 'http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav&characterUrl=/kokoro/models/character.png';
+const LEGACY_LOCALHOST_AVATAR_URL = 'http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav';
+const LEGACY_LOCALHOST_AVATAR_URL_127 = 'http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav';
 
 const defaultSettings = Object.freeze({
     enabled: true,
-    avatarUrl: 'http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav',
+    avatarUrl: DEFAULT_AVATAR_URL,
     autoSpeak: true,
     stopBeforeSpeak: true,
     width: 360,
     height: 480,
-    mouthX: 500,
-    mouthY: 520,
+    mouthX: 1152,
+    mouthY: 1385,
     mouthScale: 1,
     skipCodeBlocks: true,
     skipQuotes: false,
@@ -20,12 +23,16 @@ const defaultSettings = Object.freeze({
 let avatarFrame = null;
 let panel = null;
 let statusElement = null;
+let panelStatusElement = null;
 let lastSpokenMessageId = null;
+let avatarReady = false;
+let pendingSpeechText = null;
 
 export async function init() {
     initSettings();
     renderAvatarPanel();
     renderSettings();
+    bindAvatarMessages();
     bindChatEvents();
     applyPanelSettings();
 }
@@ -39,6 +46,20 @@ function initSettings() {
         if (extension_settings[MODULE_NAME][key] === undefined) {
             extension_settings[MODULE_NAME][key] = defaultSettings[key];
         }
+    }
+
+    if (
+        extension_settings[MODULE_NAME].avatarUrl === LEGACY_LOCALHOST_AVATAR_URL ||
+        extension_settings[MODULE_NAME].avatarUrl === LEGACY_LOCALHOST_AVATAR_URL_127
+    ) {
+        extension_settings[MODULE_NAME].avatarUrl = DEFAULT_AVATAR_URL;
+        saveSettingsDebounced();
+    }
+
+    if (extension_settings[MODULE_NAME].mouthX === 500 && extension_settings[MODULE_NAME].mouthY === 520) {
+        extension_settings[MODULE_NAME].mouthX = defaultSettings.mouthX;
+        extension_settings[MODULE_NAME].mouthY = defaultSettings.mouthY;
+        saveSettingsDebounced();
     }
 }
 
@@ -60,20 +81,58 @@ function renderAvatarPanel() {
     panel = document.createElement('div');
     panel.id = 'kokoro_avatar_panel';
 
+    const toolbar = document.createElement('div');
+    toolbar.id = 'kokoro_avatar_toolbar';
+    toolbar.innerHTML = `
+        <span class="kokoro-avatar-title">Kokoro Avatar</span>
+        <span id="kokoro_avatar_panel_status">Loading...</span>
+        <input id="kokoro_avatar_panel_test" class="menu_button" type="button" value="Test">
+        <input id="kokoro_avatar_panel_stop" class="menu_button" type="button" value="Stop">
+        <input id="kokoro_avatar_panel_reload" class="menu_button" type="button" value="Reload">
+    `;
+    panelStatusElement = toolbar.querySelector('#kokoro_avatar_panel_status');
+
     avatarFrame = document.createElement('iframe');
     avatarFrame.id = 'kokoro_avatar_frame';
     avatarFrame.title = 'Kokoro Avatar';
     avatarFrame.allow = 'autoplay';
     avatarFrame.addEventListener('load', () => {
+        avatarReady = false;
         setStatus('Avatar iframe loaded.');
-        postMouthConfig();
     });
     avatarFrame.addEventListener('error', () => {
         setStatus('Failed to load avatar iframe.');
     });
 
+    panel.appendChild(toolbar);
     panel.appendChild(avatarFrame);
     document.body.appendChild(panel);
+
+    toolbar.querySelector('#kokoro_avatar_panel_test')?.addEventListener('click', () => {
+        speakText('Kokoro Avatar extension test speech.');
+    });
+    toolbar.querySelector('#kokoro_avatar_panel_stop')?.addEventListener('click', stopSpeech);
+    toolbar.querySelector('#kokoro_avatar_panel_reload')?.addEventListener('click', reloadFrame);
+}
+
+function bindAvatarMessages() {
+    window.addEventListener('message', (event) => {
+        if (!avatarFrame?.contentWindow || event.source !== avatarFrame.contentWindow) {
+            return;
+        }
+
+        const data = event.data;
+        if (!data || data.type !== 'kokoro:status' || typeof data.status !== 'string') {
+            return;
+        }
+
+        setStatus(`Avatar: ${data.status}`);
+        if (data.status === 'Ready' || data.status === 'Voice enabled') {
+            avatarReady = true;
+            postMouthConfig();
+            flushPendingSpeech();
+        }
+    });
 }
 
 function renderSettings() {
@@ -212,6 +271,8 @@ function applyPanelSettings() {
     panel.classList.toggle('kokoro-avatar-hidden', !settings.enabled);
     panel.style.width = `${clampNumber(settings.width, 160, 1200)}px`;
     panel.style.height = `${clampNumber(settings.height, 160, 1200)}px`;
+    panel.style.maxWidth = 'calc(100vw - 24px)';
+    panel.style.maxHeight = 'calc(100vh - 24px)';
 
     if (avatarFrame.src !== settings.avatarUrl) {
         avatarFrame.src = settings.avatarUrl;
@@ -277,6 +338,12 @@ function speakText(text) {
         return;
     }
 
+    if (!avatarReady) {
+        pendingSpeechText = text;
+        setStatus('Avatar is starting; queued speak request.');
+        return;
+    }
+
     if (getSettings().stopBeforeSpeak) {
         stopSpeech();
     }
@@ -289,6 +356,7 @@ function speakText(text) {
 }
 
 function stopSpeech() {
+    pendingSpeechText = null;
     avatarFrame?.contentWindow?.postMessage({ type: 'kokoro:stop' }, '*');
     setStatus('Sent stop request.');
 }
@@ -309,13 +377,28 @@ function postMouthConfig() {
 
 function reloadFrame() {
     if (!avatarFrame) return;
+    avatarReady = false;
+    pendingSpeechText = null;
     avatarFrame.src = getSettings().avatarUrl;
     setStatus('Reloading avatar iframe.');
+}
+
+function flushPendingSpeech() {
+    if (!pendingSpeechText) {
+        return;
+    }
+
+    const text = pendingSpeechText;
+    pendingSpeechText = null;
+    speakText(text);
 }
 
 function setStatus(message) {
     if (statusElement) {
         statusElement.textContent = message;
+    }
+    if (panelStatusElement) {
+        panelStatusElement.textContent = message;
     }
 }
 

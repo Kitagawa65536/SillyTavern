@@ -27,7 +27,7 @@ npm run dev
 既定のiframe URLは以下です。
 
 ```text
-http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav
+http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav&characterUrl=/kokoro/models/character.png
 ```
 
 ## iframe URL設定
@@ -35,7 +35,7 @@ http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodo
 SillyTavernの `Kokoro Avatar` 設定で `Avatar iframe URL` を指定します。TTS設定をURL queryで渡す場合は、ここに含めます。
 
 ```text
-http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav
+http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav&characterUrl=/kokoro/models/character.png
 ```
 
 ## TTS設定
@@ -45,6 +45,20 @@ SillyTavern側ではTTS API keyを扱いません。`kokoro` の `avatar.html` �
 ## 音声再生の許可
 
 ブラウザのautoplay制限により、初回はiframe内の `Enable Voice` をクリックする必要があります。TTS生成後に再生だけが拒否された場合、avatar側に `Play Last Speech` が表示され、生成済み音声を再利用して再生できます。
+
+右下のKokoro Avatar小窓には常時表示の操作バーがあります。`Test` / `Stop` / `Reload` は、Extensions設定パネルを開かなくてもその場で確認できます。
+
+## 口パク差分
+
+既定では `kokoro/public/models/character.png` を表示します。口パク用に以下の透明PNGを追加すると、生成フォールバックではなく画像に合った口差分で表示できます。
+
+```text
+kokoro/public/mouth/closed.png
+kokoro/public/mouth/half.png
+kokoro/public/mouth/open.png
+```
+
+添付キャラ画像向けの初期口中心は、元画像 `2304x3072` の座標でおおよそ `x=1152`, `y=1385` です。`320x180` 程度の透明キャンバス中央に口だけを描いた差分から始めると調整しやすいです。
 
 ## 既知の制限
 
