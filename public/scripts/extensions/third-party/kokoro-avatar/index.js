@@ -5,7 +5,7 @@ const MODULE_NAME = 'kokoroAvatar';
 
 const defaultSettings = Object.freeze({
     enabled: true,
-    avatarUrl: 'http://localhost:5173/avatar.html?ttsEndpoint=http://127.0.0.1:8088&ttsModel=irodori-tts&voice=calm_girl&responseFormat=wav',
+    avatarUrl: 'http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav',
     autoSpeak: true,
     stopBeforeSpeak: true,
     width: 360,
