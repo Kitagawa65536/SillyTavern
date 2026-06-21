@@ -46,7 +46,9 @@ SillyTavern側ではTTS API keyを扱いません。`kokoro` の `avatar.html` �
 
 ブラウザのautoplay制限により、初回はiframe内の `Enable Voice` をクリックする必要があります。TTS生成後に再生だけが拒否された場合、avatar側に `Play Last Speech` が表示され、生成済み音声を再利用して再生できます。
 
-右下のKokoro Avatar小窓には常時表示の操作バーがあります。`Test` / `Stop` / `Reload` は、Extensions設定パネルを開かなくてもその場で確認できます。
+右下のKokoro Avatar小窓には常時表示の操作バーがあります。`Test` / `Replay` / `Stop` / `Reload` は、Extensions設定パネルを開かなくてもその場で確認できます。
+
+`Replay` は、SillyTavern側で最後に検出したAI応答本文をもう一度 `kokoro:speak` として送ります。ストリーミングや再生タイミングの問題で読み上げが聞こえなかった場合は、ChatUI上の直近応答が表示された後に `Replay` を押してください。
 
 ## 口パク差分
 

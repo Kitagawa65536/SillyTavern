@@ -25,6 +25,7 @@ let panel = null;
 let statusElement = null;
 let panelStatusElement = null;
 let lastSpokenMessageId = null;
+let lastSpeechText = '';
 let avatarReady = false;
 let pendingSpeechText = null;
 
@@ -87,6 +88,7 @@ function renderAvatarPanel() {
         <span class="kokoro-avatar-title">Kokoro Avatar</span>
         <span id="kokoro_avatar_panel_status">Loading...</span>
         <input id="kokoro_avatar_panel_test" class="menu_button" type="button" value="Test">
+        <input id="kokoro_avatar_panel_replay" class="menu_button" type="button" value="Replay">
         <input id="kokoro_avatar_panel_stop" class="menu_button" type="button" value="Stop">
         <input id="kokoro_avatar_panel_reload" class="menu_button" type="button" value="Reload">
     `;
@@ -109,8 +111,9 @@ function renderAvatarPanel() {
     document.body.appendChild(panel);
 
     toolbar.querySelector('#kokoro_avatar_panel_test')?.addEventListener('click', () => {
-        speakText('Kokoro Avatar extension test speech.');
+        speakText('Kokoro Avatar extension test speech.', { remember: false });
     });
+    toolbar.querySelector('#kokoro_avatar_panel_replay')?.addEventListener('click', replayLastSpeechText);
     toolbar.querySelector('#kokoro_avatar_panel_stop')?.addEventListener('click', stopSpeech);
     toolbar.querySelector('#kokoro_avatar_panel_reload')?.addEventListener('click', reloadFrame);
 }
@@ -165,6 +168,7 @@ function renderSettings() {
                     <div id="kokoro_avatar_status" class="neutral_warning"></div>
                     <div class="kokoro-avatar-buttons">
                         <input id="kokoro_avatar_test_speak" class="menu_button" type="button" value="Test Speak">
+                        <input id="kokoro_avatar_replay" class="menu_button" type="button" value="Replay Last">
                         <input id="kokoro_avatar_stop" class="menu_button" type="button" value="Stop">
                         <input id="kokoro_avatar_reload" class="menu_button" type="button" value="Reload iframe">
                     </div>
@@ -229,8 +233,9 @@ function bindSettingsInputs() {
     }
 
     document.getElementById('kokoro_avatar_test_speak')?.addEventListener('click', () => {
-        speakText('Kokoro Avatar extension test speech.');
+        speakText('Kokoro Avatar extension test speech.', { remember: false });
     });
+    document.getElementById('kokoro_avatar_replay')?.addEventListener('click', replayLastSpeechText);
     document.getElementById('kokoro_avatar_stop')?.addEventListener('click', stopSpeech);
     document.getElementById('kokoro_avatar_reload')?.addEventListener('click', reloadFrame);
 }
@@ -332,14 +337,24 @@ function stripHtml(text) {
     return element.textContent || element.innerText || '';
 }
 
-function speakText(text) {
+function speakText(text, options = {}) {
+    const input = String(text ?? '').trim();
+    if (!input) {
+        setStatus('No speech text to send.');
+        return;
+    }
+
+    if (options.remember !== false) {
+        lastSpeechText = input;
+    }
+
     if (!avatarFrame?.contentWindow) {
         setStatus('Avatar iframe is not ready.');
         return;
     }
 
     if (!avatarReady) {
-        pendingSpeechText = text;
+        pendingSpeechText = input;
         setStatus('Avatar is starting; queued speak request.');
         return;
     }
@@ -350,9 +365,18 @@ function speakText(text) {
 
     avatarFrame.contentWindow.postMessage({
         type: 'kokoro:speak',
-        text,
+        text: input,
     }, '*');
-    setStatus('Sent speak request.');
+    setStatus(options.replay ? 'Sent replay request.' : 'Sent speak request.');
+}
+
+function replayLastSpeechText() {
+    if (!lastSpeechText) {
+        setStatus('No recent message to replay.');
+        return;
+    }
+
+    speakText(lastSpeechText, { remember: false, replay: true });
 }
 
 function stopSpeech() {
@@ -390,7 +414,7 @@ function flushPendingSpeech() {
 
     const text = pendingSpeechText;
     pendingSpeechText = null;
-    speakText(text);
+    speakText(text, { remember: false });
 }
 
 function setStatus(message) {
